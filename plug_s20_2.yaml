@@ -1,0 +1,10 @@
+#Living Room Big Lamp
+
+---
+substitutions:
+  device: plug_s20_2
+  name: Plug S20 2
+  ip: 192.168.1.94
+  update_interval: 5min
+  
+<<: !include common/device/sonoff_s20.yaml

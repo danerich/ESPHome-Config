@@ -1,0 +1,169 @@
+substitutions:
+  device: esp32
+  name: ESP32
+  ip: 192.168.1.76
+
+esphome:
+  name: ${device}
+  platform: ESP32
+  board: nodemcu-32s
+
+<<: !include common/common.yaml
+
+logger:
+  
+font:
+  - file: "fonts/Roboto-Bold.ttf"
+    id: bold_font
+    glyphs: '£!"%()+,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz'
+    size: 20
+  - file: "fonts/Roboto-Regular.ttf"
+    id: reg_font
+    glyphs: '£!"%()+,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz'
+    size: 20
+  - file: "fonts/Roboto-Regular.ttf"
+    id: reg_font_big
+    glyphs: '£!"%()+,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz'
+    size: 50
+  - file: "fonts/Roboto-Regular.ttf"
+    id: reg_font_small
+    glyphs: '£!"%()+,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz'
+    size: 12
+
+image:
+  - file: "images/flash.png"
+    id: flash
+    resize: 24x24
+  - file: "images/thermometer-lines.png"
+    id: thermometer
+    resize: 24x24
+  - file: "images/reload.png"
+    id: reload
+    resize: 24x24
+  
+spi:
+  clk_pin: 12
+  mosi_pin: 13
+
+display:
+  - platform: waveshare_epaper
+    id: paper
+    cs_pin: 14
+    dc_pin: 27
+    busy_pin: 25
+    reset_pin: 26
+    model: 2.70in
+    update_interval: 15min
+    rotation: 0°
+    pages:
+      - id: refreshing
+        lambda: |-
+            it.fill(COLOR_ON);
+            it.image(80, 120, id(reload));
+      - id: data_page
+        lambda: |-
+            it.fill(COLOR_ON);
+
+            it.print(15, 10, id(reg_font_small), COLOR_OFF, "Day");
+            it.printf(15, 25, id(reg_font), COLOR_OFF, "%.2f", id(energy_daily_day).state);
+            it.printf(15, 45, id(reg_font), COLOR_OFF, "£%.2f", id(energy_day_cost).state);
+            
+
+            it.print(80, 10, id(reg_font_small), COLOR_OFF, "Night");
+            it.printf(80, 25, id(reg_font), COLOR_OFF, "%.2f", id(energy_daily_night).state);
+            it.printf(80, 45, id(reg_font), COLOR_OFF, "£%.2f", id(energy_night_cost).state);
+
+            it.image(140, 10, id(flash));
+
+            //total cost
+            it.printf(15, 65, id(reg_font_big), COLOR_OFF, "£%.2f", id(energy_total_cost).state);
+
+            //temp
+            it.print(15, 140, id(reg_font_small), COLOR_OFF, "Outdoor");
+            it.printf(15, 155, id(reg_font), COLOR_OFF, "%.1f°C", id(outdoor_temperature).state);
+
+            it.print(80, 140, id(reg_font_small), COLOR_OFF, "Heating");
+            it.printf(80, 155, id(reg_font), COLOR_OFF, "%.1fh", id(heating_time_on_today).state);
+
+            it.image(140, 140, id(thermometer));  
+
+            //indoor temp
+            //it.print(15, 140, id(reg_font_small), COLOR_OFF, "Inside");
+            it.printf(15, 175, id(reg_font_big), COLOR_OFF, "%.1f°C", id(indoor_temperature).state);
+
+            //updated time
+            it.print(15, 240, id(reg_font_small), COLOR_OFF, "Updated");
+            it.strftime(100, 240, id(reg_font_small), COLOR_OFF, "%d-%m %H:%M", id(esptime).now());
+
+globals:
+   - id: refresh_on_val
+     type: bool
+     restore_value: no
+     initial_value: 'true'
+
+sensor:
+  - platform: homeassistant
+    entity_id: sensor.energy_daily_day
+    id: energy_daily_day
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.energy_daily_night
+    id: energy_daily_night
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.energy_day_cost
+    id: energy_day_cost
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.energy_night_cost
+    id: energy_night_cost
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.living_room_thermostat_temperature
+    id: indoor_temperature
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.outdoor_temperature
+    id: outdoor_temperature
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.heating_time_on_today
+    id: heating_time_on_today
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.energy_total_cost
+    id: energy_total_cost
+    internal: true
+    on_value:
+      then:
+        - delay: 2000ms
+        - if:
+            condition:
+              - lambda: 'return id(refresh_on_val) == true;'
+              - api.connected:
+            then:
+              - logger.log: "refreshing screen"
+              - display.page.show: data_page
+              - delay: 10s
+              - component.update: paper
+              - globals.set:
+                  id: refresh_on_val
+                  value: 'false'
+              - logger.log: "refreshed screen"
+            else:
+              - logger.log: "Show data screen"
+              - display.page.show: data_page
+
+deep_sleep:
+  id: deep_sleep_night
+  sleep_duration: 5h
+
+time:
+  - platform: homeassistant
+    id: esptime
+    on_time:
+      - seconds: 0
+        minutes: 00
+        hours: 12
+        then:
+          - deep_sleep.enter: deep_sleep_night

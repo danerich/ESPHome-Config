@@ -1,0 +1,43 @@
+substitutions:
+  device: sensor_node
+  name: Sensor Node
+  ip: 192.168.1.85
+
+esphome:
+  name: ${device}
+  platform: ESP8266
+  board: nodemcu
+
+<<: !include common/common.yaml
+
+logger:
+  
+i2c:
+  sda: D1
+  scl: D2
+  scan: True
+  id: bus_a
+  
+sensor:
+  - platform: ccs811
+    baseline: 0x1477
+    eco2:
+      name: "eCO2 Value"
+    tvoc:
+      name: "Total Volatile Organic Compound"
+    address: 0x5A
+    update_interval: 60s
+  - platform: bme280
+    temperature:
+      name: "Temperature"
+      oversampling: 16x
+    pressure:
+      name: "Pressure"
+    humidity:
+      name: "Humidity"
+    address: 0x76
+    update_interval: 60s
+  - platform: bh1750
+    name: "Light Level"
+    address: 0x23
+    update_interval: 60s

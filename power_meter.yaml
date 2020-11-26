@@ -1,0 +1,80 @@
+substitutions:
+  device: power_meter
+  name: Power Meter
+  ip: 192.168.1.81
+
+esphome:
+  name: ${device}
+  platform: ESP8266
+  board: nodemcu
+
+<<: !include common/common.yaml
+
+logger:
+  
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+    
+# 800 beats per a min should be 1kwh
+# 4.5 / 60 = 0.075
+# 800 * 0.075 = 60kw
+
+# 60 sec in hours 0.0166667
+# 60 * 0.01666667 = 1kwh
+  
+sensor:
+  - platform: pulse_counter
+    pin: GPIO04
+    unit_of_measurement: 'kW'
+    name: 'Power Meter'
+    update_interval: 60s
+    internal_filter: 0.5s
+    id: power_meter
+    filters:
+      - multiply: 0.075
+      
+  - platform: total_daily_energy
+    name: "Daily Energy"
+    power_id: power_meter
+    id: daily_energy
+    
+  # - platform: template
+  #   name: "Power Meter kWh"
+  #   unit_of_measurement: 'kWh'
+  #   accuracy_decimals: 7
+  #   lambda: |-
+  #     return id(power_meter).state * 0.01666667;
+  #   update_interval: 60s
+    
+  - platform: template
+    id: energy_cost
+    name: "Daily Energy Cost"
+    unit_of_measurement: '£'
+    accuracy_decimals: 2
+    lambda: |-
+      return id(daily_energy).state * 0.16840;
+    update_interval: 60s
+    internal: true
+  
+  - platform: wifi_signal
+    name: "WiFi Signal Sensor"
+    update_interval: 60s
+    
+  - platform: uptime
+    name: Uptime Sensor
+    
+display:
+  - platform: lcd_gpio
+    dimensions: 16x2
+    data_pins:
+      - GPIO16
+      - GPIO14
+      - GPIO12
+      - GPIO13
+    enable_pin: GPIO15
+    rs_pin: GPIO02
+    lambda: |-
+      it.printf(0, 0, "%.2f kW", id(power_meter).state);
+      it.printf(0, 1, "%.2f kWh \xED%.2f", id(daily_energy).state, id(energy_cost).state);
+

@@ -1,0 +1,12 @@
+#Dane's Bedside Lamp 
+
+---
+substitutions:
+  device: plug_s26_1
+  name: Plug S26 1
+  ip: 192.168.1.91
+  update_interval: 5min
+  
+<<: !include common/device/sonoff_s26.yaml
+
+

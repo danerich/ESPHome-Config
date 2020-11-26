@@ -1,0 +1,10 @@
+#Office Lamp
+
+---
+substitutions:
+  device: plug_s20_4
+  name: Plug S20 4
+  ip: 192.168.1.96
+  update_interval: 5min
+  
+<<: !include common/device/sonoff_s20.yaml

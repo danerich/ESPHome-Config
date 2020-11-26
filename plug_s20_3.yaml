@@ -1,0 +1,10 @@
+#Living Room Medium Light
+
+---
+substitutions:
+  device: plug_s20_3
+  name: Plug S20 3
+  ip: 192.168.1.95
+  update_interval: 5min
+  
+<<: !include common/device/sonoff_s20.yaml

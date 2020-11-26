@@ -1,0 +1,9 @@
+/secrets.yaml
+**/
+!common/
+!common/**/
+!docs/
+!images/
+!fonts/
+
+
