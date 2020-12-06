@@ -29,7 +29,7 @@ sensor:
     unit_of_measurement: 'kW'
     name: 'Power Meter'
     update_interval: 60s
-    internal_filter: 0.5s
+    internal_filter: 10ms
     id: power_meter
     filters:
       - multiply: 0.075
